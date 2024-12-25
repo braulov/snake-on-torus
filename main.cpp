@@ -1,147 +1,188 @@
 #include <bits/stdc++.h>
-
-// TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 using namespace std;
-mt19937_64 rnd;
-struct engine {
-    long long n, m, s;
-    pair<int,int> current_pos;
-    pair<int,int> apple_pos;
-    engine() {
-        //this->s = (rnd()%1000000)+1;
-        this->n = (rnd()%1000000)+1;
-        this->m = (rnd()%1)+1;
 
-        this->current_pos = {rnd()%n, rnd()%m};
-        this->apple_pos = {rnd()%n, rnd()%m};
-    }
-    engine(int n, int m, pair<int,int> current_pos, pair<int,int> apple_pos) {
-        this->current_pos = current_pos;
-        this->apple_pos = apple_pos;
+// Random number generator
+mt19937_64 rnd;
+
+// Class representing the game engine for the "snake on a torus" problem
+class engine {
+private:
+    long long n, m; // Dimensions of the torus (n rows, m columns)
+    long long steps = 0; // Counter for the number of steps taken
+    pair<int, int> currentPos; // Current position of the snake
+    pair<int, int> applePos; // Position of the apple
+    bool isOver = false; // Flag indicating if the game is over (snake has reached the apple)
+
+public:
+    // Default constructor (creates a minimal torus of size 1x1)
+    engine() { this->n = 1, this->m = 1; }
+
+    // Constructor initializing the torus dimensions, snake position, and apple position
+    engine(long long n, long long m, pair<int, int> currentPos, pair<int, int> applePos) {
+        this->currentPos = currentPos;
+        this->applePos = applePos;
         this->n = n;
         this->m = m;
     }
+
+    // Move the snake up (wrapping around if necessary)
     void up() {
-        this->current_pos.first -= 1;
-        if (this->current_pos.first == -1) this->current_pos.first += n;
+        steps++;
+        this->currentPos.first -= 1;
+        if (this->currentPos.first == -1) this->currentPos.first += n;
     }
+
+    // Move the snake down (wrapping around if necessary)
     void down() {
-        this->current_pos.first += 1;
-        if (this->current_pos.first == n) this->current_pos.first -= n;
+        steps++;
+        this->currentPos.first += 1;
+        if (this->currentPos.first == n) this->currentPos.first -= n;
     }
+
+    // Move the snake left (wrapping around if necessary)
     void left() {
-        this->current_pos.second -= 1;
-        if (this->current_pos.second == -1) this->current_pos.second += m;
+        steps++;
+        this->currentPos.second -= 1;
+        if (this->currentPos.second == -1) this->currentPos.second += m;
     }
+
+    // Move the snake right (wrapping around if necessary)
     void right() {
-        this->current_pos.second += 1;
-        if (this->current_pos.second == m) this->current_pos.second -= m;
+        steps++;
+        this->currentPos.second += 1;
+        if (this->currentPos.second == m) this->currentPos.second -= m;
     }
-    bool check() {
-        return current_pos == apple_pos;
+
+    /**
+     * Executes a movement command and checks if the game is over.
+     * @param s Command string ("UP", "DOWN", "LEFT", "RIGHT")
+     * @return true if the snake has reached the apple, false otherwise
+     */
+    bool sendSignal(const string& s) {
+        if (isOver) return currentPos == applePos;
+        if (s == "LEFT") left();
+        else if (s == "RIGHT") right();
+        else if (s == "DOWN") down();
+        else if (s == "UP") up();
+        else cout << "Unknown command, try again\n";
+        isOver |= (currentPos == applePos); // Update game state
+        return currentPos == applePos;
     }
-    void print_field() const {
-        for(int i = 0; i < n; i++) {
-            for(int j = 0; j < m; j++) {
-                pair<int,int> cur = {i,j};
-                if (this->current_pos==cur && this->apple_pos==cur) cout<<'x'<<' ';
-                else if (this->current_pos==cur) cout<<'*'<<' ';
-                else if (this->apple_pos==cur) cout<<'0'<<' ';
-                else cout<<'-'<<' ';
+
+    /**
+     * Prints the current state of the game field to the console.
+     * '*' represents the snake, '0' represents the apple, 'x' if they overlap, '-' for empty cells.
+     */
+    void printField() const {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                pair<int, int> cur = {i, j};
+                if (this->currentPos == cur && this->applePos == cur) cout << 'x' << ' ';
+                else if (this->currentPos == cur) cout << '*' << ' ';
+                else if (this->applePos == cur) cout << '0' << ' ';
+                else cout << '-' << ' ';
             }
-            cout<<'\n';
+            cout << '\n';
         }
     }
+
+    /**
+     * @return Total number of steps taken by the snake.
+     */
+    [[nodiscard]] int getSteps() const { return this->steps; }
+
+    /**
+     * @return true if the game is over (snake has reached the apple), false otherwise.
+     */
+    [[nodiscard]] bool gameIsOver() const { return isOver; }
 };
 
-void dumb_solve() {
-    engine eng;
-    int count = 0;
-    pair<int,int> st = eng.current_pos;
-    pair<int,int> fs = eng.apple_pos;
+// Function to solve the game using a spiral search pattern
+int spiralSolve(engine eng) {
     int k = 1;
-    bool flag = true;
-    while(flag) {
-        for(int i = 0; i < k; i++) {
-            if (flag) eng.up(), count++;
-            flag &= !eng.check();
-        }
-        if (flag) eng.right(), count++;
-        flag &= !eng.check();
-        for(int i = 0; i < k+1; i++) {
-            if (flag) eng.down(), count++;
-            flag &= !eng.check();
-        }
-        if (flag) eng.right(), count++;
-        flag &= !eng.check();
-        /*for(int i = 0; i < k; i++) {
-            if (flag) eng.up(), count++;
-            flag &= !eng.check();
-        }
-        for(int i = 0; i < k; i++) {
-            if (flag) eng.left(), count++;
-            flag &= !eng.check();
-        }
-        for(int i = 0; i < k+1; i++) {
-            if (flag) eng.down(), count++;
-            flag &= !eng.check();
-        }
-        for(int i = 0; i < k+1; i++) {
-            if (flag) eng.right(), count++;
-            flag &= !eng.check();
-        }*/
-        k+=2;
+    while (!eng.gameIsOver()) {
+        for (int i = 0; i < k; i++) eng.sendSignal("UP");
+        for (int i = 0; i < k; i++) eng.sendSignal("LEFT");
+        for (int i = 0; i < k + 1; i++) eng.sendSignal("DOWN");
+        for (int i = 0; i < k + 1; i++) eng.sendSignal("RIGHT");
+        k += 2;
     }
+    return eng.getSteps();
 }
 
+// Function to solve the game using a random walk in all four directions
+int randomWalk4(engine eng) {
+    while (!eng.gameIsOver()) {
+        int direction = rnd() % 4;
+        if (direction == 0) eng.sendSignal("LEFT");
+        else if (direction == 1) eng.sendSignal("RIGHT");
+        else if (direction == 2) eng.sendSignal("UP");
+        else eng.sendSignal("DOWN");
+    }
+    return eng.getSteps();
+}
+
+// Function to solve the game using a random walk in two directions (UP and RIGHT)
+int randomWalk2(engine eng) {
+    while (!eng.gameIsOver()) {
+        int direction = rnd() % 2;
+        if (direction == 0) eng.sendSignal("RIGHT");
+        else eng.sendSignal("UP");
+    }
+    return eng.getSteps();
+}
+
+// Function to solve the game by moving in a diagonal pattern (works for coprime dimensions)
+int coprimeCase(engine eng) {
+    while (!eng.gameIsOver()) {
+        eng.sendSignal("RIGHT");
+        eng.sendSignal("UP");
+    }
+    return eng.getSteps();
+}
+
+// Function to solve the game using a mixed strategy
+int mixSolve(engine eng) {
+    int curX = 0, curY = 0;
+    while (!eng.gameIsOver()) {
+        int mvX = rnd() % 2, mvY = rnd() % 2;
+        if (mvX) {
+            eng.sendSignal("RIGHT");
+            for (int i = 0; i <= curY; i++) eng.sendSignal("DOWN");
+            for (int i = 0; i <= curY; i++) eng.sendSignal("UP");
+        }
+        if (mvY) {
+            eng.sendSignal("UP");
+            for (int i = 0; i <= curX; i++) eng.sendSignal("LEFT");
+            for (int i = 0; i <= curX; i++) eng.sendSignal("RIGHT");
+        }
+    }
+    return eng.getSteps();
+}
+
+// Main function to run multiple tests with random initial conditions
 int main() {
-    rnd.seed(time(0));
-    int t = 1000;
-    long double old_t = t;
-    long double e = 0;
-    int bad = 0;
-    while(t--) {
-        engine eng;
-        int count = 0;
-        int count_apples = 0;
-        vector<int> primes = {2,3,5,7,9,11,13,17,19};
-        bool flag = true;
-        //int s = 1;
+    rnd.seed(time(0)); // Initialize random seed
+    int t = 100; // Number of test cases
+    long double numberOfTests = t;
+    long double averageRatio = 0;
+    int badTests = 0;
 
-        while(flag) {
-            int mv = rnd() % 4;
-            if (mv == 0) {
-                eng.left(),count++;
-                flag &= !eng.check();
-            }
-            if (mv == 1) {
-                eng.right(),count++;
-                flag &= !eng.check();
-            } else if (mv == 2) {
-                eng.up(),count++;
-                flag &= !eng.check();
-            } else {
-                eng.down(),count++;
-                flag &= !eng.check();
-            }
+    while (t--) {
+        long long n = 1001, m = 1001;
+        pair<int, int> currentPos = {rnd() % n, rnd() % m};
+        pair<int, int> applePos = {rnd() % n, rnd() % m};
 
+        engine eng(n, m, currentPos, applePos);
+        int steps = mixSolve(eng);
+
+        // Check if the solution is too slow
+        if (steps > (35 * n * m)) {
+            badTests++;
         }
-
-        if (count>35*eng.n*eng.m) {
-            cout<<"oops"<<'\n';
-            cout<<count<<' '<<(eng.n*eng.m)<<'\n';
-            cout<<count/(eng.n*eng.m)<<'\n';
-            bad++;
-            //break;
-        } else cout<<count/(eng.n*eng.m)<<'\n';
-        e+=((long double)count/(long double)(eng.n*eng.m));
+        averageRatio += ((long double)steps / (long double)(n * m));
     }
-    cout<<e/old_t<<'\n';
-    cout<<bad<<'\n';
-}
 
-// TIP See CLion help at <a
-// href="https://www.jetbrains.com/help/clion/">jetbrains.com/help/clion/</a>.
-//  Also, you can try interactive lessons for CLion by selecting
-//  'Help | Learn IDE Features' from the main menu.
+    cout << "Average ratio steps/S = " << averageRatio / numberOfTests << '\n';
+    cout << "Number of tests with steps > 35S = " << badTests << '\n';
+}
